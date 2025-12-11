@@ -6,6 +6,7 @@
 #include "GameTime.h"
 #include "mythic_affix.h"
 #include "mythic_plus.h"
+#include "mythic_plus_kill_requirement.h"
 
 class mythic_plus_all_mapscript : public AllMapScript
 {
@@ -215,6 +216,9 @@ public:
 
     void OnDestroyInstance(MapInstanced* /*mapInstanced*/, Map* map) override
     {
+        if (sMythicPlusKillRequirement)
+            sMythicPlusKillRequirement->ResetForInstance(map);
+
         sMythicPlus->RemoveDungeonInfo(map->GetInstanceId());
     }
 };

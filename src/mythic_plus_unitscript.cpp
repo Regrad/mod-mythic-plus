@@ -6,6 +6,7 @@
 #include "GameTime.h"
 #include "mythic_plus.h"
 #include "mythic_affix.h"
+#include "mythic_plus_kill_requirement.h"
 
 class mythic_plus_unitscript : public UnitScript
 {
@@ -56,18 +57,25 @@ public:
     }
 
     void OnUnitDeath(Unit* unit, Unit* killer) override
-    {
-        if (unit && killer && unit->GetMap() == killer->GetMap())
-        {
-            Creature* creature = unit->ToCreature();
-            if (!creature)
-                return;
+	{
+    if (unit && killer && unit->GetMap() == killer->GetMap())
+		{
+			Creature* creature = unit->ToCreature();
+			if (!creature)
+				return;
 
-            MythicPlus::CreatureData* creatureData = sMythicPlus->GetCreatureData(creature, false);
-            if (creatureData == nullptr || creatureData->engageTimer == 0)
-                return;
+            // NEW: учёт убийства трэш-моба для процента прогресса
+            if (sMythicPlusKillRequirement)
+            {
+                if (Player* killerPlayer = killer->GetCharmerOrOwnerPlayerOrPlayerItself())
+                    sMythicPlusKillRequirement->OnMobKilled(killerPlayer, creature);
+            }
 
-            Map* map = creature->GetMap();
+			MythicPlus::CreatureData* creatureData = sMythicPlus->GetCreatureData(creature, false);
+			if (creatureData == nullptr || creatureData->engageTimer == 0)
+				return;
+
+			Map* map = creature->GetMap();
 
             uint64 gameTime = GameTime::GetGameTime().count();
             uint64 diff = gameTime - creatureData->engageTimer;
@@ -105,12 +113,47 @@ public:
 
                         if (mapData->receiveLoot)
                         {
-                            rewarded = true;
-                            sMythicPlus->Reward(player, mapData->mythicLevel->reward);
+                            bool canReward = true;
+
+                            // NEW: проверяем, выполнено ли килл-требование
+                            if (sMythicPlusKillRequirement)
+                            {
+                                float requiredPercent = GetMythicPlusRequiredKillPercent();
+                                float currentPercent = sMythicPlusKillRequirement->GetKilledPercent(map);
+
+                                if (!sMythicPlusKillRequirement->HasRequiredPercent(map, requiredPercent))
+                                {
+                                    canReward = false;
+
+                                    std::ostringstream ossFail;
+                                    ossFail << "Mythic Plus loot was not granted, you killed only "
+                                        << uint32(currentPercent + 0.5f) << "% of the required "
+                                        << uint32(requiredPercent + 0.5f) << "% trash mobs.";
+                                    MythicPlus::BroadcastToPlayer(player, ossFail.str());
+                                }
+                            }
+
+                            if (canReward)
+                            {
+                                rewarded = true;
+                                sMythicPlus->Reward(player, mapData->mythicLevel->reward);
+                            }
                         }
+
                         mapData->done = true;
 
-                        sMythicPlus->SaveDungeonInfo(map->GetInstanceId(), map->GetId(), mapData->timeLimit, mapData->mythicPlusStartTimer, mapData->mythicLevel->level, mapData->penaltyOnDeath, mapData->deaths, true);
+                        // ВАЖНО: здесь НЕТ randomAffixCount — иначе и была ошибка «слишком много аргументов»
+                        sMythicPlus->SaveDungeonInfo(
+                            map->GetInstanceId(),
+                            map->GetId(),
+                            mapData->timeLimit,
+                            mapData->mythicPlusStartTimer,
+                            mapData->mythicLevel->level,
+                            mapData->penaltyOnDeath,
+                            mapData->deaths,
+                            true      // done
+                            // isMythic берётся из дефолтного аргумента
+                        );
                     }
 
                     const MythicLevel* mythicLevel = sMythicPlus->GetMythicLevel(savedDungeon->mythicLevel);

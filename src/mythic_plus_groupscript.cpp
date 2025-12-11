@@ -4,6 +4,7 @@
 
 #include "ScriptMgr.h"
 #include "mythic_plus.h"
+#include "mythic_plus_kill_requirement.h"
 
 class mythic_plus_groupscript : public GroupScript
 {
@@ -29,6 +30,28 @@ public:
                 oss << sMythicPlus->GetCurrentMythicPlusLevelForGUID(leaderGuid.GetCounter());
                 oss << ")! Group's leader can use a Mythic Keystone to transform a dungeon into Mythic Plus.";
                 MythicPlus::BroadcastToPlayer(player, oss.str());
+
+                // Сообщаем новому участнику текущий прогресс по трэшу, если он уже в подземелье Mythic+
+                if (sMythicPlusKillRequirement && player->IsInWorld())
+                {
+                    Map* map = player->GetMap();
+                    if (map && sMythicPlus->IsMapInMythicPlus(map))
+                    {
+                        float requiredPercent = GetMythicPlusRequiredKillPercent();
+                        float killedPercent = sMythicPlusKillRequirement->GetKilledPercent(map);
+
+                        if (killedPercent > 0.0f)
+                        {
+                            uint32 killedRounded = uint32(killedPercent + 0.5f);
+                            uint32 requiredRounded = uint32(requiredPercent + 0.5f);
+
+                            std::ostringstream ossTrash;
+                            ossTrash << "Current Mythic Plus trash progress: "
+                                << killedRounded << "% / " << requiredRounded << "%.";
+                            MythicPlus::BroadcastToPlayer(player, ossTrash.str());
+                        }
+                    }
+                }
             }
         }
     }

@@ -4,6 +4,7 @@
 
 #include "ScriptMgr.h"
 #include "mythic_plus.h"
+#include "mythic_plus_kill_requirement.h" // NEW
 
 class mythic_plus_all_creaturescript : public AllCreatureScript
 {
@@ -37,7 +38,11 @@ public:
                 sMythicPlus->StoreOriginalCreatureData(creature);
 
                 creatureData->processed = true;
-                sMythicPlus->ProcessStaticAffixes(mapData->mythicLevel, creature);  
+                sMythicPlus->ProcessStaticAffixes(mapData->mythicLevel, creature);
+
+                // NEW: регистрируем трэш-моба в системе килл-требования
+                if (sMythicPlusKillRequirement)
+                    sMythicPlusKillRequirement->RegisterEligibleMob(creature);
             }
         }
     }
