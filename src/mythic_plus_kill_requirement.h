@@ -6,7 +6,7 @@
 #include <unordered_map>
 
 class Creature;
-class Player;
+class Unit;
 class Map;
 
 // Простая система трекинга: для каждой инсты храним общее кол-во трэш-мобов и количество убитых.
@@ -17,7 +17,7 @@ public:
     void RegisterEligibleMob(Creature* creature);
 
     // Вызывается при смерти моба.
-    void OnMobKilled(Player* killer, Creature* creature);
+    void OnMobKilled(Unit* killer, Creature* creature);
 
     // Чистим данные конкретной инсты (по уничтожению инстанса).
     void ResetForInstance(Map* map);

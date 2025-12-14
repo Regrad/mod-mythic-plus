@@ -8,6 +8,7 @@
 #include "Chat.h"
 #include "Config.h"
 #include "mythic_plus.h"
+#include "Unit.h"
 
 #include <cmath>
 
@@ -114,9 +115,9 @@ void MythicPlusKillRequirement::RegisterEligibleMob(Creature* creature)
     ++counters->total; // теперь это "total элитного трэша"
 }
 
-void MythicPlusKillRequirement::OnMobKilled(Player* killer, Creature* creature)
+void MythicPlusKillRequirement::OnMobKilled(Unit* /*killer*/, Creature* creature)
 {
-    if (!killer || !creature)
+    if (!creature)
         return;
 
     Map* map = creature->GetMap();
