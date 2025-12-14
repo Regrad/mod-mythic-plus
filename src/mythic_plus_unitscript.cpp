@@ -58,13 +58,7 @@ public:
 
     void OnUnitDeath(Unit* unit, Unit* killer) override
 	{
-        if (!unit)
-            return;
-
-        if (killer && unit->GetMap() != killer->GetMap())
-            return;
-
-        if (unit)
+    if (unit && killer && unit->GetMap() == killer->GetMap())
 		{
 			Creature* creature = unit->ToCreature();
 			if (!creature)
@@ -73,7 +67,8 @@ public:
             // NEW: учёт убийства трэш-моба для процента прогресса
             if (sMythicPlusKillRequirement)
             {
-                sMythicPlusKillRequirement->OnMobKilled(killer, creature);
+                if (Player* killerPlayer = killer->GetCharmerOrOwnerPlayerOrPlayerItself())
+                    sMythicPlusKillRequirement->OnMobKilled(killerPlayer, creature);
             }
 
 			MythicPlus::CreatureData* creatureData = sMythicPlus->GetCreatureData(creature, false);
